@@ -197,10 +197,12 @@ int start_packet=1;
 	 			
 	 			printf("\nLength %d\n",length); 
 	 			start_packet=0;
+	 			printf("ZZZZZZZZ\n");
+	 				fprintf(outFile,"ZZZZZZZZ\n");
 	 			
 	 		}	 			
 
-			if(packet_byte_counter>11) //not printing ts_sec and u_sec in output file
+			if(packet_byte_counter>7) //not printing ts_sec and u_sec in output file
 			{
 
 	 		
@@ -233,6 +235,8 @@ int start_packet=1;
 	 				length=0;
 	 				packet_byte_counter=0;
 	 				start_packet=1;
+	 				printf("XXXXXXXX\n");
+	 				fprintf(outFile,"XXXXXXXX\n");
  			}
 			
 		}
