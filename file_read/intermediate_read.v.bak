@@ -1,0 +1,23 @@
+module intermediate_read
+(
+	clock,
+	reset,
+	data_i,
+	data_o
+);
+
+input reset;
+input clock;
+input[7:0] data_i;
+output[63:0] data_o;
+
+reg[2:0] counter;
+
+always @ (posedge clock)
+begin: reading
+	if(reset== 1'b1) begin
+		if(counter==1) begin
+			data_o[63:56]=data_i
+		end
+	end
+		

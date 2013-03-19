@@ -1,0 +1,87 @@
+library ieee;
+use ieee.std_logic_1164.all;
+
+use std.textio.all;
+use work.txt_util.all;
+ 
+ 
+entity FILE_READ is
+  generic (
+           stim_file:       string  := "dat3.dat";
+           bitwidth :		integer:=8
+          );
+end FILE_READ;
+
+ 
+-- I/O Dictionary
+--
+-- Inputs:
+--
+-- CLK:              new cell needed
+-- RST:              reset signal, wait with reading till reset seq complete
+--   
+-- Outputs:
+--
+-- Y:                Output vector
+-- EOG:              End Of Generation, all lines have been read from the file
+--
+   
+   
+architecture read_from_file of FILE_READ is
+  
+  
+    file stimulus: TEXT open read_mode is stim_file;
+
+signal RST:  std_logic;
+signal CLK:  std_logic := '0';
+signal eog:  std_logic;
+signal Y: std_logic_vector(bitwidth-1 downto 0);
+signal output: std_logic_vector(63 downto 0);
+signal counter: std_logic_vector(1 downto 0) :=(others=>'0');
+begin
+
+RST <= '0', '1' after 40 ns, '0' after 100 ns;    
+CLk <= not CLK after 10 ns;
+
+-- read data and control information from a file
+
+receive_data: process
+
+variable l: line;
+variable s: string(y'range);
+   
+begin                                       
+
+   EOG <= '0';
+   
+   -- wait for Reset to complete
+   wait until RST='1';
+   wait until RST='0';
+
+   
+   while not endfile(stimulus) loop
+
+     -- read digital data from input file
+     readline(stimulus, l);
+     read(l, s);
+     Y <= to_std_logic_vector(s);
+     counter=counter+"01";
+     if(counter="01") then
+     output(63:63-8)<=Y
+  	   
+ 	    
+     wait until CLK = '1';
+
+   end loop;
+   
+   print("I@FILE_READ: reached end of "& stim_file);
+   EOG <= '1';
+   
+   wait;
+
+ end process receive_data;
+
+
+
+end read_from_file;
+ 
