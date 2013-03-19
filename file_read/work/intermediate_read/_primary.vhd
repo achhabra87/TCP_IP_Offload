@@ -12,4 +12,7 @@ entity intermediate_read is
         data_y          : out    vl_logic_vector(63 downto 0);
         data_o          : out    vl_logic_vector(63 downto 0)
     );
+    attribute mti_svvh_generic_type : integer;
+    attribute mti_svvh_generic_type of out_bit : constant is 1;
+    attribute mti_svvh_generic_type of in_bit : constant is 1;
 end intermediate_read;

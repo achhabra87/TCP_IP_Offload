@@ -52,33 +52,52 @@ component intermediate_read
 	data_y: out std_logic_vector(63 downto 0)
 	);
 end component; 
+
+
+component packetizer is
+	generic(
+		input_width: integer:=64;
+		
+	);
+	port(
+		-- inputs
+		data_i				:	in	std_logic_vector(input_width-1 downto 0);
+		clk					: in std_logic; -- clock input
+		start_packet		: in std_logic; -- indicates when packet start arriving
+		end_packet			: in std_logic; -- indicates when packet stops receving
+
+		-- outputs
+		-- not required for design but useful to debug
+		s							:	buffer std_logic_vector(5 downto 0)	
+	 );
+end component;
   
   
 
     file stimulus: TEXT open read_mode is stim_file;
+signal sbuff			:	buffer std_logic_vector(5 downto 0)
+signal RST				:  std_logic;
+signal CLK				:  std_logic := '0';
+signal eog				:  std_logic;
+signal Y				: std_logic_vector(input_bit-1 downto 0);
+signal output			: std_logic_vector(output_bit-1 downto 0):=(others=>'0');
+signal out_feed			: std_logic_vector(output_bit-1 downto 0):=(others=>'0');
+signal shift_out_feed	: std_logic_vector(output_bit-1 downto 0);
+signal dummy			: std_logic_vector(output_bit-1 downto 0);
+signal start_msg		: std_logic:='0';
+signal stop_msg			: std_logic:='0';
 
-signal RST:  std_logic;
-signal CLK:  std_logic := '0';
-signal eog:  std_logic;
-signal Y: std_logic_vector(input_bit-1 downto 0);
-signal output: std_logic_vector(output_bit-1 downto 0):=(others=>'0');
-signal out_feed: std_logic_vector(output_bit-1 downto 0):=(others=>'0');
-signal shift_out_feed: std_logic_vector(output_bit-1 downto 0);
-signal dummy: std_logic_vector(output_bit-1 downto 0);
-signal start_msg: std_logic:='0';
-signal stop_msg: std_logic:='0';
+signal counter			: std_logic_vector(2 downto 0):=(others=>'0');
+signal byte_counter		: std_logic_vector(output_bit-1 downto 0):=(others=>'0');
 
-signal counter: std_logic_vector(2 downto 0):=(others=>'0');
-signal byte_counter: std_logic_vector(output_bit-1 downto 0):=(others=>'0');
-
-signal d1:std_logic;
-signal d2:std_logic;
-signal d3:std_logic;
+signal d1				:std_logic;
+signal d2				:std_logic;
+signal d3				:std_logic;
 
 
-signal q_o1:std_logic;
-signal q_o2:std_logic;
-signal q_o3:std_logic;
+signal q_o1				:std_logic;
+signal q_o2				:std_logic;
+signal q_o3				:std_logic;
 
 begin
 RST <= '1', '0' after 10 ns;    
@@ -119,7 +138,22 @@ inter: intermediate_read
 	data_y=>shift_out_feed
 	);
 
+packet: packetizer 
+	port map(
+		-- inputs
+		data_i=>out_feed,	
+		clk	=>q_o3,
+		start_packet=>start_msg,
+		end_packet=>stop_msg	
 
+		-- outputs
+
+		rst_o					:	out std_logic; -- sends RST1 1 to all the other modules when indentifies an error in any of the fields i
+	
+		-- not required for design but useful to debug
+		s							:	buffer std_logic_vector(5 downto 0)	
+	 );
+end component;
 
 
 
@@ -152,12 +186,15 @@ begin
 	  if(Y(1)='Z') then
 			print("starting packet");
 			start_msg<='1';
-			counter<=0;
+			counter<=(others=>'0');
 	   elsif (Y(1)='X') then
-			stop_msg<='0';
+			stop_msg<='1';
 			print("end of packet");
-			counter<=0;
+			counter<=(others=>'0');
+			
 		else
+			stop_msg<='0';
+			start_msg<='0';
 			if(counter=1) then
 				output(63 downto 56)<=Y;
 			elsif(counter=2) then

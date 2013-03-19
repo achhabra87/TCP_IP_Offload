@@ -20,5 +20,9 @@
 *.pcap
 
 
+# VHDL Backup Files
+*.vhd.bak
+
+
 #gedit or anyother kind of backup Files
 *~

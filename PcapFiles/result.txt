@@ -1,0 +1,21 @@
+Packet # 1
+Packet size: 54 bytes
+Epoch Time: 1363389428:998360 seconds
+src port: 49764 dest port: 80 
+src address: 207.10.136.100 dest address: 207.10.136.100 
+seq number: 3353986930 ack number: 4131443732 
+
+Packet # 2
+Packet size: 60 bytes
+Epoch Time: 1363389429:15086 seconds
+src port: 80 dest port: 49764 
+src address: 74.125.228.5 dest address: 74.125.228.5 
+seq number: 4131443732 ack number: 3370764146 
+
+Packet # 3
+Packet size: 54 bytes
+Epoch Time: 1363389429:15205 seconds
+src port: 49764 dest port: 80 
+src address: 207.10.136.100 dest address: 207.10.136.100 
+seq number: 3370764146 ack number: 4148220948 
+

@@ -17,7 +17,7 @@ int main(int argc, char *argv[])
     * Step 2 - Get a file name
     */
  
-    string file = "/home/amandeep/Desktop/test.pcap";
+    string file = "dat3.pcap";
  
     /*
     * Step 3 - Create an char array to hold the error.
