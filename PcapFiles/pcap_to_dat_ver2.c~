@@ -182,6 +182,7 @@ int byte_counter=0;
 uint16_t length=0;
 uint16_t packet_byte_counter=0;
 int start_packet=1;
+int counting=1;
   	for(i = 0;i < fileLen;++i){    
 
 	
@@ -223,14 +224,24 @@ int start_packet=1;
 				hex_to_binary(array,4, buf[1]);
 				printf("%d%d%d%d", array[0],array[1],array[2],array[3]);
 				fprintf(outFile,"%d%d%d%d", array[0],array[1],array[2],array[3]);
+				printf("	%d ",counting++);
 				 	printf("\n");
 				 	fprintf(outFile,"\n");
 				 	printf(" ");
+				 	
 			}
 			packet_byte_counter++;
 			
  			if(!(packet_byte_counter^length))
  			{
+ 					while(counting%8!=1)
+ 					{
+ 						printf("00000000 %d\n",counting++);
+	 				fprintf(outFile,"00000000\n");
+ 					
+ 					}
+ 			
+ 					counting=1;
 	 				printf("\nLength_matched\n");
 	 				length=0;
 	 				packet_byte_counter=0;

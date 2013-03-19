@@ -234,7 +234,7 @@ int counting=1;
 			
  			if(!(packet_byte_counter^length))
  			{
- 					while(counting%8!=1)
+ 					while(counting%8!=1)// zero padding the system to make it help test bench
  					{
  						printf("00000000 %d\n",counting++);
 	 				fprintf(outFile,"00000000\n");
