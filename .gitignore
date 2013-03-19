@@ -40,6 +40,7 @@
 *.jpg
 *.html
 *.bsf
+*.mpf
 
 # ignore simulation output of ModelSim
 wlf*
@@ -54,16 +55,13 @@ vsim.dbg
 
 
 
-# ignore hdl source files in top level directory
-#*.vhd
-#*.v
-
 # ignore Quartus II generated files
 *sopc[_i]*
 *.jdi
 *.ptf.*
 *.sof
 *.pof
+*.qsf
 *.qws
 *.smsg
 *_inst.vhd
@@ -91,6 +89,6 @@ vsim.dbg
 db/
 incremental_db/
 simulation/
-#timing/
-#testbench/
+timing/
+testbench/
 *_sim/
