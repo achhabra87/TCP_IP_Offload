@@ -7,7 +7,8 @@ use work.global_constants.all;
 
 entity packetizer is
 	generic(
-		input_width: integer:=64
+		input_width: integer:=64;
+		bit_width48:integer:=48
 		
 	);
 	port(
@@ -53,8 +54,36 @@ signal ip_opt: std_logic:='0';
 signal index_msb: integer:=0;
 signal tag_loc: integer:=0;
 variable start_ind: integer:=0;
+signal eth_we  : std_logic:='0';             -- write enable
+signal eth_a   : unsigned(3 downto 0);  -- this is the address location
+signal eth_di  : unsigned(bit_width48-1 downto 0);  -- data in
+signal eth_do  : unsigned(bit_width48-1 downto 0); -- data out
+
+component ram_infr
+generic( memorysize: integer:=15;
+			bit_width : integer:= 48
+);
+	port (
+		clk : in std_logic;             -- clock
+		we  : in std_logic;             -- write enable
+		a   : in unsigned(3 downto 0);  -- this is the address location
+		di  : in unsigned(bit_width-1 downto 0);  -- data in
+		
+		do  : out unsigned(bit_width-1 downto 0) -- data out
+	);
+end component;
+
 begin -- begining of architecture
 
+ethernet_header: ram_infr
+	port map (
+		clk =>clk,             -- clock
+		we  =>eth_we,             -- write enable
+		a   =>eth_a,  -- this is the address location
+		di  =>eth_di,  -- data in
+		
+		do  =>eth_do -- data out
+	);
 
 process(clk, EN)
 begin
@@ -91,10 +120,14 @@ case y is
 		
 		
 		
+		
 	-- eth_mac extacts the destination and source mac address, ethernet type_len
 	-- first 6 bytes of the input are destination mac, next 6 bytes are source mac address
 	-- next 2 bytes contains type of packet
 	when eth_mac=>
+			eth_we<='0';
+			eth_a<="000";
+			eth_di<=unsigned(data_i(input_width-1 downto input_width-48-1));
 			--dest_mac_addr(1)<=data_i(input_width-1 downto input_width-mac_addr_size-1);
 			--src_mac_addr(1)<=data_i(input_width-mac_addr_size-2 downto input_width-mac_addr_Size-mac_addr_size-2);
 			eth_byte_counter<=4;
