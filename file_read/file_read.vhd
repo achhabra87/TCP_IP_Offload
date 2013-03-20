@@ -54,9 +54,9 @@ component intermediate_read
 end component; 
 
 
-component packetizer is
+component packetizer
 	generic(
-		input_width: integer:=64;
+		input_width: integer:=64
 		
 	);
 	port(
@@ -75,7 +75,7 @@ end component;
   
 
     file stimulus: TEXT open read_mode is stim_file;
-signal sbuff			:	buffer std_logic_vector(5 downto 0)
+signal sbuff			:	std_logic_vector(5 downto 0);
 signal RST				:  std_logic;
 signal CLK				:  std_logic := '0';
 signal eog				:  std_logic;
@@ -138,22 +138,22 @@ inter: intermediate_read
 	data_y=>shift_out_feed
 	);
 
-packet: packetizer 
+packetize: packetizer 
 	port map(
 		-- inputs
 		data_i=>out_feed,	
 		clk	=>q_o3,
 		start_packet=>start_msg,
-		end_packet=>stop_msg	
+		end_packet=>stop_msg,	
 
 		-- outputs
 
-		rst_o					:	out std_logic; -- sends RST1 1 to all the other modules when indentifies an error in any of the fields i
+		--rst_o					:	out std_logic; -- sends RST1 1 to all the other modules when indentifies an error in any of the fields i
 	
 		-- not required for design but useful to debug
-		s							:	buffer std_logic_vector(5 downto 0)	
+		s=>sbuff
 	 );
-end component;
+
 
 
 
