@@ -65,6 +65,7 @@ component packetizer
 		clk					: in std_logic; -- clock input
 		start_packet		: in std_logic; -- indicates when packet start arriving
 		end_packet			: in std_logic; -- indicates when packet stops receving
+		EN					: in std_logic; -- EN
 
 		-- outputs
 		-- not required for design but useful to debug
@@ -86,6 +87,7 @@ signal shift_out_feed	: std_logic_vector(output_bit-1 downto 0);
 signal dummy			: std_logic_vector(output_bit-1 downto 0);
 signal start_msg		: std_logic:='0';
 signal stop_msg			: std_logic:='0';
+signal EN			: std_logic:='0';
 
 signal counter			: std_logic_vector(2 downto 0):=(others=>'0');
 signal byte_counter		: std_logic_vector(output_bit-1 downto 0):=(others=>'0');
@@ -144,7 +146,8 @@ packetize: packetizer
 		data_i=>out_feed,	
 		clk	=>q_o3,
 		start_packet=>start_msg,
-		end_packet=>stop_msg,	
+		end_packet=>stop_msg,
+		EN=>EN,	
 
 		-- outputs
 
@@ -173,6 +176,7 @@ begin
    -- wait for Reset to complete
    --wait until RST='1';
    wait until RST='0';
+	EN<='1';
 
    
    while not endfile(stimulus) loop
@@ -193,26 +197,28 @@ begin
 			counter<=(others=>'0');
 			
 		else
-			stop_msg<='0';
-			start_msg<='0';
-			if(counter=1) then
+
+			if(counter=0) then
 				output(63 downto 56)<=Y;
-			elsif(counter=2) then
+			elsif(counter=1) then
 				output(55 downto 48)<=Y;	
-			elsif(counter=3) then
+			elsif(counter=2) then
 				output(47 downto 40 )<=Y;
-			elsif(counter=4) then
+			elsif(counter=3) then
 				output(39 downto 32)<=Y;
-			elsif(counter=5) then
+			elsif(counter=4) then
 				output(31 downto 24)<=Y;
-			elsif(counter=6) then
+			elsif(counter=5) then
 				 output(23 downto 16)<=Y;
+			elsif(counter=6) then
+				output(15 downto 8)<=Y;	
 			elsif(counter=7) then
-				output(15 downto 8)<=Y;
-			elsif(counter=0) then
 				output(7 downto 0)<=Y;
 				out_feed(63 downto 8)<=output(63 downto 8);
 				out_feed(7 downto 0)<=Y;
+				stop_msg<='0';
+				start_msg<='0';
+
 			end if;
 			 counter<=counter+1;
 		 end if;

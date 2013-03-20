@@ -35,7 +35,7 @@ end packetizer;
 
 architecture rtl_packetizer of packetizer is
 
-type states is (start,drop_packet,preamble,eth_mac,eth_vlan,ip_hdr_s1,ip_hdr_s2,ip_hdr_opt,tcp_hdr_s1,tcp_hdr_s2,tcp_hdr_opt,payload,done);
+type states is (start,drop_packet,preamble,eth_mac,eth_src_mac,eth_vlan,ip_hdr_s1,ip_hdr_s2,ip_hdr_opt,tcp_hdr_s1,tcp_hdr_s2,tcp_hdr_opt,payload,done);
 signal y: states;
 signal tmpvector: std_logic_vector (input_width-1 downto 0);
 
@@ -53,11 +53,21 @@ signal payload_byte_counter: integer:=0;
 signal ip_opt: std_logic:='0';
 signal index_msb: integer:=0;
 signal tag_loc: integer:=0;
-variable start_ind: integer:=0;
-signal eth_we  : std_logic:='0';             -- write enable
-signal eth_a   : unsigned(3 downto 0);  -- this is the address location
-signal eth_di  : unsigned(bit_width48-1 downto 0);  -- data in
-signal eth_do  : unsigned(bit_width48-1 downto 0); -- data out
+signal start_ind: integer:=0;
+
+-- signal to ether_dst_header memory
+signal mem_addr   : unsigned(3 downto 0);  -- this is the address location
+signal eth_dst_we  : std_logic:='0';             -- write enable
+signal eth_dst_di  : unsigned(bit_width48-1 downto 0);  -- data in
+signal eth_dst_do  : unsigned(bit_width48-1 downto 0); -- data out
+
+
+
+-- signal to ether_dst_header memory
+signal eth_src_we  : std_logic:='0';             -- write enable
+signal eth_src_di  : unsigned(bit_width48-1 downto 0);  -- data in
+signal eth_src_do  : unsigned(bit_width48-1 downto 0); -- data out
+
 
 component ram_infr
 generic( memorysize: integer:=15;
@@ -75,15 +85,26 @@ end component;
 
 begin -- begining of architecture
 
-ethernet_header: ram_infr
+ethernet_dst_header: ram_infr
 	port map (
 		clk =>clk,             -- clock
-		we  =>eth_we,             -- write enable
-		a   =>eth_a,  -- this is the address location
-		di  =>eth_di,  -- data in
+		we  =>eth_dst_we,             -- write enable
+		a   =>mem_addr,  -- this is the address location
+		di  =>eth_dst_di,  -- data in
 		
-		do  =>eth_do -- data out
+		do  =>eth_src_do -- data out
 	);
+ethernet_src_header: ram_infr
+	port map (
+		clk =>clk,             -- clock
+		we  =>eth_src_we,             -- write enable
+		a   =>mem_addr,  -- this is the address location
+		di  =>eth_src_di,  -- data in
+		
+		do  =>eth_src_do -- data out
+	);
+
+
 
 process(clk, EN)
 begin
@@ -123,36 +144,41 @@ case y is
 		
 	-- eth_mac extacts the destination and source mac address, ethernet type_len
 	-- first 6 bytes of the input are destination mac, next 6 bytes are source mac address
-	-- next 2 bytes contains type of packet
+	-- next 2 bytes contains first (2 bytes of src header
 	when eth_mac=>
-			eth_we<='0';
-			eth_a<="000";
-			eth_di<=unsigned(data_i(input_width-1 downto input_width-48-1));
+
+			eth_dst_di<=unsigned(data_i(input_width-1 downto input_width-47-1));
 			--dest_mac_addr(1)<=data_i(input_width-1 downto input_width-mac_addr_size-1);
 			--src_mac_addr(1)<=data_i(input_width-mac_addr_size-2 downto input_width-mac_addr_Size-mac_addr_size-2);
-			eth_byte_counter<=4;
-			-- src_mac, dst_mac
-			if data_i(15 downto 0)=eth_type_ip4  then  	-- IP4
-				start_ind:=0;
+			eth_byte_counter<=8;
+			y<=eth_src_mac;
+	
+
+	--eth_src_mac 
+	-- captures last 4 bytes of src header, 2 bytes of   
+	when eth_src_mac=>
+		y<=eth_vlan;
+		-- src_mac
+			if data_i(32 downto 16)=eth_type_ip4  then  	-- IP4
+				start_ind<=0;
 				y<=ip_hdr_s1;
-			elsif data_i(15 downto 0)=eth_type_arp  then -- ARP
+			elsif data_i(32 downto 16)=eth_type_arp  then -- ARP
 				rst_o<='0';
 				y<=start;
-			elsif data_i(15 downto 0)=eth_type_ipx  then -- Internet Packet eXchange
+			elsif data_i(32 downto 16)=eth_type_ipx  then -- Internet Packet eXchange
 				rst_o<='0';
 				y<=start;
-			elsif data_i(15 downto 0)=eth_type_ip6 then -- IPv6
+			elsif data_i(32 downto 16)=eth_type_ip6 then -- IPv6
 				rst_o<='0';
 				y<=start;
-			elsif data_i(15 downto 0)=eth_type_vlan then -- IPv6
+			elsif data_i(32 downto 16)=eth_type_vlan then -- IPv6
 				rst_o<='0';
 				y<=eth_vlan;
 			else
 				y<=drop_packet;
 				rst_o<='1';
 			end if;
-		
-		
+	
 	-- eth_type_vlan
 	when eth_vlan=>
 			index_msb<=0;
@@ -248,29 +274,29 @@ end process;
 process(y)	   --------------------------- STATE VARIABLE	
 begin
 	if y =start then
-		s <= "0000";
+		s <= "000000";
 	elsif y =preamble then
-		s <= "0001";
+		s <= "000001";
 	elsif y =eth_mac then
-		s <= "0010";
+		s <= "000010";
 	elsif y =eth_vlan then
-		s <= "0011";
+		s <= "000011";
 	elsif y =ip_hdr_s1 then
-		s <= "0100";
+		s <= "000100";
 	elsif y =ip_hdr_s2 then
-		s <= "0101";
+		s <= "000101";
 	elsif y =ip_hdr_opt then
-		s <= "0110";
+		s <= "000110";
 	elsif y =tcp_hdr_s1 then
-		s <= "0111";
+		s <= "000111";
 	elsif y =tcp_hdr_s2 then
-		s <= "1000";
+		s <= "001000";
 	elsif y =tcp_hdr_opt then
-		s <= "1001";
+		s <= "001001";
 	elsif y =payload then
-		s <= "1010";
+		s <= "001010";
 	elsif y =drop_packet then
-		s <= "1011";
+		s <= "001011";
 	end if;
 end process;
 

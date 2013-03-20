@@ -1,0 +1,12 @@
+ssh://asc2171@micro8.ilab.columbia.edu/usr/cad/modelsim/examples/vpi
+vlog prim.v dff.v top.v
+gcc -c -g -I/usr/cad/modelsim/include example1.c
+ld -shared -E -o example1.so example1.o
+
+
+gcc -c -fPIC -I/usr/cad/modelsim/include example1.c
+ld -shared -fPIC -o example1.sl example1.o
+
+
+gcc -c -g -I/usr/cad/modelsim/include example1.c
+ld -shared -E -o example1.so example1.o

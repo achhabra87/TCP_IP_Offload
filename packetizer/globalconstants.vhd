@@ -8,8 +8,8 @@ package global_constants is
 	constant DEVICE_MAC: STD_LOGIC_VECTOR (47 downto 0) := x"00aa0062c609";
 	
 	-- IP header Length and TCP Header length 
-	constant ip_hdr_len: std_logic_vector(15 downto 0):=x"00";
-	constant tcp_hdr_len: std_logic_vector(15 downto 0):=x"00";
+	constant ip_hdr_len: std_logic_vector(15 downto 0):=x"0000";
+	constant tcp_hdr_len: std_logic_vector(15 downto 0):=x"0000";
 	
 	
 	
