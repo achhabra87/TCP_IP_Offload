@@ -11,16 +11,21 @@ entity dflipflop is
 	);
 end dflipflop;
 
-architecture rtl_dflipflop of dflipflop is 
+architecture rtl_dflipflop of dflipflop is
+
+signal q_1:std_logic:='0';
+signal q_0:std_logic:='1';
 begin
 
-process(clk)
+
+process(clk,d)
 begin
-if(rising_edge(clk)) then
-	q<=d;
-	q1<=not(d);
+if(clk='1' and clk'event) then
+	q_0<=d;
+	q_1<=not d;
 end if;
 
 end process;
-
+q<=q_0;
+q1<=q_1;
 end rtl_dflipflop;

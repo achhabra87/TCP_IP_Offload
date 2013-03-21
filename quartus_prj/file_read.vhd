@@ -95,6 +95,8 @@ signal d3				:std_logic;
 signal q_o1				:std_logic;
 signal q_o2				:std_logic;
 signal q_o3				:std_logic;
+type states is (start_packet,end_packet,reading);
+signal ystate: states;
 
 begin
 RST <= '1', '0' after 10 ns;    
@@ -177,16 +179,19 @@ begin
      Y <= to_std_logic_vector(s);
 	  if(Y(1)='Z') then
 			print("starting packet");
+			--ystate<=start_packet;
 			start_msg<='1';
 			counter<=(others=>'0');
 	   elsif (Y(1)='X') then
+			--ystate<=end_packet;
 			stop_msg<='1';
 			print("end of packet");
 			counter<=(others=>'0');
 			
 		else
-
+			ystate<=reading;
 			if(counter=0) then
+				stop_msg<='0';
 				output(63 downto 56)<=Y;
 			elsif(counter=1) then
 				output(55 downto 48)<=Y;	
@@ -204,7 +209,6 @@ begin
 				output(7 downto 0)<=Y;
 				out_feed(63 downto 8)<=output(63 downto 8);
 				out_feed(7 downto 0)<=Y;
-				stop_msg<='0';
 				start_msg<='0';
 
 			end if;
@@ -213,6 +217,8 @@ begin
      wait until CLK = '1';
 
    end loop;
+
+  
    
    print("I@FILE_READ: reached end of "& stim_file);
    EOG <= '1';
@@ -221,7 +227,22 @@ begin
 
  end process receive_data;
 
- 
+process(q_o3)
+begin
+
+if (q_o3'EVENT and q_o3 = '1') then
+case ystate is 
+ when start_packet=>
+	--start_msg<='1';
+ when end_packet=>
+	--stop_msg<='1';
+ when reading=>
+	--start_msg<='0';
+	--stop_msg<='0';
+	end case;
+end if;	
+end process;
+
  
  
 

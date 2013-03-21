@@ -309,7 +309,7 @@ case y is
 		-- checksum 2
 		-- urgent pointer 2 bytes
 		-- tcp options if any 4 bytes	
-		y<=payload;
+		y<=preamble;
 	when payload=>
 		y<=done;
 	when done=>
