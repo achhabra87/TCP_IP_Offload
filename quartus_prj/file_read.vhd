@@ -158,7 +158,8 @@ packetize: packetizer
 receive_data: process
 
 variable l: line;
-variable s: string(y'range);
+--variable s: string(y'range);
+variable s: string(1 to 8);
 begin                                       
 
    EOG <= '0';

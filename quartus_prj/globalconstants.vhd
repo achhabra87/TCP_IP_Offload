@@ -1,11 +1,20 @@
-library ieee;
-use ieee.std_logic_1164.all;
+library IEEE;
+use IEEE.STD_LOGIC_1164.ALL;
+use IEEE.STD_LOGIC_ARITH.ALL;
+use IEEE.STD_LOGIC_UNSIGNED.ALL;
 
 package global_constants is
 
 	-- IP and MAC addresses of the board
-	constant DEVICE_IP : STD_LOGIC_VECTOR (31 downto 0) := x"82664267";
-	constant DEVICE_MAC: STD_LOGIC_VECTOR (47 downto 0) := x"00aa0062c609";
+	constant host_ip1 : STD_LOGIC_VECTOR (31 downto 0) := x"82664267";
+	constant host_mac1: STD_LOGIC_VECTOR (47 downto 0) := x"00aa0062c609";
+	constant dest_mac1: STD_LOGIC_VECTOR (47 downto 0) := x"525400123502";
+	constant ip_dest1:STD_LOGIC_VECTOR (31 downto 0) := x"4A7DE443"; -- Google.com
+	constant ip_dest2:STD_LOGIC_VECTOR (31 downto 0) := x"cebe242d"; -- yahoo.com
+	constant sport_1:STD_LOGIC_VECTOR (15 downto 0) :=conv_std_logic_vector(37587,16);
+	constant sport_2:STD_LOGIC_VECTOR (15 downto 0) :=conv_std_logic_vector(37580,16);
+	constant dport_1:STD_LOGIC_VECTOR (15 downto 0) :=conv_std_logic_vector(80,16);
+	constant dport_2:STD_LOGIC_VECTOR (15 downto 0) :=conv_std_logic_vector(80,16);
 	
 	-- IP header Length and TCP Header length 
 	constant ip_hdr_len: std_logic_vector(15 downto 0):=x"0000";

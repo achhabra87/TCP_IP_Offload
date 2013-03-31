@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use ieee.std_logic_unsigned.all;
 use work.global_constants.all;
---use work.header_field.all;
+use work.header_fields.all;
 
 entity packetizer is
 	generic(
@@ -20,6 +20,9 @@ entity packetizer is
 		EN					: in std_logic; -- EN
 		
 		-- outputs
+		eth_header	:out ethernet_record;
+		ip_header	: out ip_record;
+		tcp_header : out tcp_record;
 		--en_ip_ck			: out std_logic; -- if packet contains IP header - Activates IP checksum module;
 		--en_tcp_ck			: out std_logic;-- if packet contains TCP header - Activates TCP checksum module
 		--en_tcp_state		: out std_logic;
@@ -68,10 +71,10 @@ signal eth_src_we  : std_logic:='0';             -- write enable
 signal eth_src_di  : unsigned(bit_width48-1 downto 0);  -- data in
 signal eth_src_do  : unsigned(bit_width48-1 downto 0); -- data out
 
-subtype logic_v16 is std_logic_vector(15 downto 0);
-subtype logic_v8 is std_logic_vector(7 downto 0);
-subtype logic_v4 is std_logic_vector(3 downto 0);
-subtype logic_v32 is std_logic_vector(31 downto 0);
+--subtype logic_v16 is std_logic_vector(15 downto 0);
+--subtype logic_v8 is std_logic_vector(7 downto 0);
+--subtype logic_v4 is std_logic_vector(3 downto 0);
+--subtype logic_v32 is std_logic_vector(31 downto 0);
 
 -- IP Header Fields
 signal ip_v: logic_v4;				--	Version

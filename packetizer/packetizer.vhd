@@ -69,40 +69,9 @@ signal eth_src_di  : unsigned(bit_width48-1 downto 0);  -- data in
 signal eth_src_do  : unsigned(bit_width48-1 downto 0); -- data out
 
 
-component ram_infr
-generic( memorysize: integer:=15;
-			bit_width : integer:= 48
-);
-	port (
-		clk : in std_logic;             -- clock
-		we  : in std_logic;             -- write enable
-		a   : in unsigned(3 downto 0);  -- this is the address location
-		di  : in unsigned(bit_width-1 downto 0);  -- data in
-		
-		do  : out unsigned(bit_width-1 downto 0) -- data out
-	);
-end component;
 
 begin -- begining of architecture
 
-ethernet_dst_header: ram_infr
-	port map (
-		clk =>clk,             -- clock
-		we  =>eth_dst_we,             -- write enable
-		a   =>mem_addr,  -- this is the address location
-		di  =>eth_dst_di,  -- data in
-		
-		do  =>eth_src_do -- data out
-	);
-ethernet_src_header: ram_infr
-	port map (
-		clk =>clk,             -- clock
-		we  =>eth_src_we,             -- write enable
-		a   =>mem_addr,  -- this is the address location
-		di  =>eth_src_di,  -- data in
-		
-		do  =>eth_src_do -- data out
-	);
 
 
 
@@ -142,12 +111,13 @@ case y is
 		
 		
 		
-	-- eth_mac extacts the destination and source mac address, ethernet type_len
+	-- eth_ma tacts the destination and source mac address, ethernet type_len
 	-- first 6 bytes of the input are destination mac, next 6 bytes are source mac address
 	-- next 2 bytes contains first (2 bytes of src header
 	when eth_mac=>
 
 			eth_dst_di<=unsigned(data_i(input_width-1 downto input_width-47-1));
+			eth_src_di(bit_width48-1 downto bit_width48-1-15 )<=unsigned(data_i(input_width-48-1 downto 0));
 			--dest_mac_addr(1)<=data_i(input_width-1 downto input_width-mac_addr_size-1);
 			--src_mac_addr(1)<=data_i(input_width-mac_addr_size-2 downto input_width-mac_addr_Size-mac_addr_size-2);
 			eth_byte_counter<=8;
@@ -159,6 +129,7 @@ case y is
 	when eth_src_mac=>
 		y<=eth_vlan;
 		-- src_mac
+		eth_src_di(bit_width48-1-16 downto 0)<=unsigned(data_i(input_width-1 downto input_width-1-31));	
 			if data_i(32 downto 16)=eth_type_ip4  then  	-- IP4
 				start_ind<=0;
 				y<=ip_hdr_s1;
