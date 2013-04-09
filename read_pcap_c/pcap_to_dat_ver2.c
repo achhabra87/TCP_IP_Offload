@@ -203,7 +203,7 @@ int counting=1;
 	 			
 	 		}	 			
 
-			if(packet_byte_counter>7) //not printing ts_sec and u_sec in output file
+			if(packet_byte_counter>15) //not printing ts_sec and u_sec in output file
 			{
 
 	 		
