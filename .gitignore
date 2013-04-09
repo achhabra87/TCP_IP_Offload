@@ -47,6 +47,7 @@ wlf*
 *.wlf
 *.vstf
 *.ucdb
+*.prw
 cov*/
 transcript*
 sc_dpiheader.h

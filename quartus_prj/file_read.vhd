@@ -4,6 +4,8 @@ use ieee.numeric_std.all;
 use ieee.std_logic_arith.all;
 use ieee.std_logic_unsigned.all;
 use ieee.std_logic_textio.all;
+use work.global_constants.all;
+use work.header_fields.all;
 
 library std;
 use std.standard.string;
@@ -63,11 +65,23 @@ component packetizer
 		EN					: in std_logic; -- EN
 
 		-- outputs
+		 writeReq: out std_logic; 
+		header_data : out eth_ip_tcp;
 		-- not required for design but useful to debug
 		s							:	buffer std_logic_vector(5 downto 0)	
 	 );
 end component;
-  
+
+component fifo_vector is
+port (  data_in: in eth_ip_tcp;  
+    clk,nrst: in std_logic;
+    readReq: in std_logic;  
+        writeReq: in std_logic; 
+        data_out: out eth_ip_tcp; 
+        empty: out std_logic;  
+        full: out std_logic;
+    error: out std_logic);
+end component;
   
 
     file stimulus: TEXT open read_mode is stim_file;
@@ -97,7 +111,18 @@ signal q_o2				:std_logic;
 signal q_o3				:std_logic;
 type states is (start_packet,end_packet,reading);
 signal ystate: states;
+signal header_data: eth_ip_tcp;
 
+
+
+
+-- For Fifo
+ signal readReq: std_logic;  
+ signal    writeReq: std_logic; 
+ signal    data_out: eth_ip_tcp; 
+ signal    empty: std_logic;  
+ signal    full: std_logic;
+ signal error: std_logic;
 begin
 RST <= '1', '0' after 10 ns;    
 CLk <= not CLK after 10 ns;
@@ -144,13 +169,20 @@ packetize: packetizer
 		--rst_o					:	out std_logic; -- sends RST1 1 to all the other modules when indentifies an error in any of the fields i
 	
 		-- not required for design but useful to debug
+		 writeReq=>writeReq,
+		header_data=>header_data,
 		s=>sbuff
 	 );
-
-
-
-
-
+fifo: fifo_vector
+port map (  data_in=>header_data,  
+    clk=>q_o3,
+	 nrst=>RST,
+    readReq=>readReq,  
+        writeReq=> writeReq, 
+        data_out=>data_out, 
+        empty=>empty,  
+        full=>full,
+    error=>error);
 
 
 -- read data and control information from a file

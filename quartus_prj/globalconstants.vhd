@@ -2,6 +2,7 @@ library IEEE;
 use IEEE.STD_LOGIC_1164.ALL;
 use IEEE.STD_LOGIC_ARITH.ALL;
 use IEEE.STD_LOGIC_UNSIGNED.ALL;
+use work.header_fields.all;
 
 package global_constants is
 
@@ -42,6 +43,19 @@ package global_constants is
 	-- 	0x8137 IPX, Internet Packet eXchange (Novell)
 	-- 	0x86dd IPv6, Internet Protocol version 6
 	-- 	0x8100 VLAN, Virtual Bridged LAN (VLAN, IEEE 802.1Q)
+	
+	
+	constant ip_v: std_logic_vector(3 downto 0):=conv_std_logic_vector(4,4);				--	Version
+	constant ip_hlen:logic_v4:=conv_std_logic_vector(5,4);			--	Header length
+	constant ip_tos:logic_v8:=x"00";			-- Service Type
+	constant ip_flag_frag_off:logic_v16:="0100000000000000";	-- flags-- frgrament offs
+	constant ip_ttl:logic_v8:=conv_std_logic_vector(250,8);			-- Time To Live
+	constant ip_chk_initial:logic_v16:=x"0000";		-- Header Checksum
+	constant ip_protocol:logic_v8:=conv_std_logic_vector(6,8);		-- Protocol, set it TCP for packet generation
+	
+	constant ip_options: logic_v32:=x"00000000";
+	constant tcp_window: logic_v16:=conv_std_logic_vector(65355,16);
+	
 end package global_constants;
 
 

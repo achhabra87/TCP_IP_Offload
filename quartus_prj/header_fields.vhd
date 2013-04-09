@@ -29,11 +29,11 @@ package header_fields is
 	constant seq_size: integer:=32;
 	
 	-- definition of rom type of different data fields, e.g. for 32 bit wide field ROM is rom_type32 and so on.
-	type rom_type48 is array (0 to num_packets) of std_logic_vector(48+id_tag_size+dirty_bit_size-1 downto 0);
-	type rom_type32 is array (0 to num_packets) of std_logic_vector(32+id_tag_size+dirty_bit_size-1 downto 0);
-	type rom_type16 is array (0 to num_packets) of std_logic_vector(16+id_tag_size+dirty_bit_size-1 downto 0);
-	type rom_type8 is array (0 to num_packets) of std_logic_vector(8+id_tag_size+dirty_bit_size-1 downto 0);
-	type rom_type4 is array (0 to num_packets) of std_logic_vector(4+id_tag_size+dirty_bit_size-1 downto 0);
+	--type rom_type48 is array (0 to num_packets) of std_logic_vector(48+id_tag_size+dirty_bit_size-1 downto 0);
+	--type rom_type32 is array (0 to num_packets) of std_logic_vector(32+id_tag_size+dirty_bit_size-1 downto 0);
+	--type rom_type16 is array (0 to num_packets) of std_logic_vector(16+id_tag_size+dirty_bit_size-1 downto 0);
+	--type rom_type8 is array (0 to num_packets) of std_logic_vector(8+id_tag_size+dirty_bit_size-1 downto 0);
+	--type rom_type4 is array (0 to num_packets) of std_logic_vector(4+id_tag_size+dirty_bit_size-1 downto 0);
 		
 	
 	subtype logic_v48 is std_logic_vector(47 downto 0);
@@ -42,14 +42,15 @@ package header_fields is
 	subtype logic_v4 is std_logic_vector(3 downto 0);
 	subtype logic_v32 is std_logic_vector(31 downto 0);
 	--Ethernet Header Fields
-	signal dest_mac_addr :rom_type48;
-	signal src_mac_addr : rom_type48;
-	signal vlan : rom_type16;  
-	signal eth_type:rom_type16;
+	--signal dest_mac_addr :rom_type48;
+	--signal src_mac_addr : rom_type48;
+	--signal vlan : rom_type16;  
+	--signal eth_type:rom_type16;
 
 
-	
-	type tcp_states is (start,drop_packet,preamble,eth_mac,eth_src_mac,eth_vlan,ip_hdr_s1,ip_hdr_s2,ip_hdr_opt,tcp_hdr_s1,tcp_hdr_s2,tcp_hdr_opt,payload,done);
+	-- TCP States
+	type tcp_states is (START_CONNECTION,SEND_ACK,SENT_RST,
+	TCP_CLOSED,SYN_SENT,SYN_RECVD,ESTABLISHED,FIN_WT1,FIN_WT2,CLOSING);
 	-- Ethernet Header Fields
 	type ethernet_record is
 	record
@@ -90,7 +91,12 @@ type ip_record is
 	tcp_urg:logic_v16;
 	tcp_options:logic_v32;
  end record;
- 
+  type eth_ip_tcp is
+  record
+	ethernet_data : ethernet_record;
+	ip_data : ip_record;
+	tcp_data:tcp_record;
+  end record;
  
   type session_record is
   record
@@ -101,7 +107,41 @@ type ip_record is
 	tcp_src_port:logic_v16;
 	tcp_dst_port:logic_v16;
  end record;
-  
+ 
+ type state_mode is (client, server);
+ 
+	type tcb_record is record		
+		mode :state_mode;
+		tcp_flags_recvd:logic_v8; -- from header fifo
+		tcp_seq_recvd:logic_v32; -- from header fifo
+		tcp_ack_recvd:logic_v32; -- from header fifo
+		tcp_ack_sent:logic_v32;	-- edited by packet gen
+		tcp_seq_sent:logic_v32;-- edited by packet gen
+		ip_id_sent: logic_v16;			-- Identifcation sent from packet gen
+	end record;
+	
+	
+	
+		type session_tcb is
+	record		
+		mode :state_mode;
+		tcp_flags_recvd:logic_v8; -- from header fifo
+		tcp_seq_recvd:logic_v32; -- from header fifo
+		tcp_ack_recvd:logic_v32; -- from header fifo
+		tcp_ack_sent:logic_v32;	-- edited by packet gen
+		tcp_seq_sent:logic_v32;-- edited by packet gen
+		ip_id_sent: logic_v16;			-- Identifcation sent from packet gen
+
+--		eth_src:logic_v48;	-- defined when contection is first established
+--		eth_dst:logic_v48;			-- defined when contection is first established
+--		ip_src_addr:logic_v32;		-- Source_IP_Address when connection is established
+--		ip_dst_addr:logic_v32;		-- Dst_IP_Address defined when connection is established
+--		
+--		tcp_src_port:logic_v16; -- defined when contection is first established
+--		tcp_dst_port:logic_v16; -- defined when contection is first established
+
+	end record;
+	
 
 end package header_fields;
 	--	Version first 4 bits

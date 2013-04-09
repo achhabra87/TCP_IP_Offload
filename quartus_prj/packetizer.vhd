@@ -20,9 +20,8 @@ entity packetizer is
 		EN					: in std_logic; -- EN
 		
 		-- outputs
-		eth_header	:out ethernet_record;
-		ip_header	: out ip_record;
-		tcp_header : out tcp_record;
+		 writeReq:  out std_logic; 
+		header_data : out eth_ip_tcp;
 		--en_ip_ck			: out std_logic; -- if packet contains IP header - Activates IP checksum module;
 		--en_tcp_ck			: out std_logic;-- if packet contains TCP header - Activates TCP checksum module
 		--en_tcp_state		: out std_logic;
@@ -38,7 +37,7 @@ end packetizer;
 
 architecture rtl_packetizer of packetizer is
 
-type states is (start,drop_packet,preamble,eth_mac,eth_src_mac,eth_vlan,ip_hdr_s1,ip_hdr_s2,ip_hdr_opt,tcp_hdr_s1,tcp_hdr_s2,tcp_hdr_opt,payload,done);
+type states is (start,drop_packet,preamble,eth_mac,eth_src_mac,eth_vlan,ip_hdr_s1,ip_hdr_s2,ip_hdr_opt,tcp_hdr_s1,tcp_hdr_s2,tcp_hdr_opt,tcp_opt,payload,done);
 signal y: states;
 signal tmpvector: std_logic_vector (input_width-1 downto 0);
 
@@ -59,18 +58,12 @@ signal tag_loc: integer:=0;
 signal start_ind: integer:=0;
 
 -- signal to ether_dst_header memory
-signal mem_addr   : unsigned(3 downto 0);  -- this is the address location
-signal eth_dst_we  : std_logic:='0';             -- write enable
-signal eth_dst_di  : unsigned(bit_width48-1 downto 0);  -- data in
-signal eth_dst_do  : unsigned(bit_width48-1 downto 0); -- data out
-
-
+signal writeenable  : std_logic:='0';             -- write enable
+signal eth_dst_di  : std_logic_vector (bit_width48-1 downto 0);  -- data in
 
 -- signal to ether_dst_header memory
-signal eth_src_we  : std_logic:='0';             -- write enable
-signal eth_src_di  : unsigned(bit_width48-1 downto 0);  -- data in
-signal eth_src_do  : unsigned(bit_width48-1 downto 0); -- data out
-
+signal eth_src_di  : std_logic_vector (bit_width48-1 downto 0);  -- data in
+signal eth_type:logic_v16;
 --subtype logic_v16 is std_logic_vector(15 downto 0);
 --subtype logic_v8 is std_logic_vector(7 downto 0);
 --subtype logic_v4 is std_logic_vector(3 downto 0);
@@ -89,6 +82,10 @@ signal ip_protocol:logic_v8;		-- Protocol
 signal ip_src_addr:logic_v32;		-- Source_IP_Address
 signal ip_dst_addr:logic_v32;		-- Dst_IP_Address
 signal ip_options: logic_v32;		-- IP options if any
+signal data_offset:logic_v4;
+signal payload_len: logic_v16;
+signal htons_ip_len:logic_v16;
+--payload_len=htons_ip_len- (x"00","00",ip_hlen,"00")-(x"00","00",tcp_dat_off_res(7 downto 4),"00")
 
 
 signal tcp_src_port:logic_v16;
@@ -100,40 +97,61 @@ signal tcp_flags:logic_v8;
 signal tcp_window:logic_v16;
 signal tcp_checksum:logic_v16;
 signal tcp_urg:logic_v16;
-signal tcp_options:logic_v32;
+type tcp_opt_array is array (0 to 10) of logic_v32;
+signal tcp_options: tcp_opt_array;
+signal tcp_opt_offset: integer :=0;
 
-signal payload_dat:logic_v32;
-
-component ram_infr
-generic( memorysize: integer:=15;
-			bit_width : integer:= 48
-);
-	port (
-		clk : in std_logic;             -- clock
-		we  : in std_logic;             -- write enable
-		a   : in unsigned(3 downto 0);  -- this is the address location
-		di  : in unsigned(bit_width-1 downto 0);  -- data in
-		
-		do  : out unsigned(bit_width-1 downto 0) -- data out
-	);
-end component;
-
+signal payload_dat:std_logic_vector(63 downto 0);
+signal offset:integer:=0;
+signal previous_dat0: std_logic_vector(63 downto 0);
+signal previous_dat1: std_logic_vector(63 downto 0);
+signal previous_dat2: std_logic_vector(63 downto 0);
+signal data_aligned : std_logic_vector(63 downto 0);
 begin -- begining of architecture
 
 
+process(offset,data_i,previous_dat0,previous_dat1,previous_dat2)
+begin
+  if(offset=0) then
+    data_aligned<=data_i;
+elsif (offset=2) then
+  data_aligned(63 downto 48) <= previous_dat0(15 downto 0);
+   data_aligned(47 downto 0) <= data_i(63 downto 16);
+ elsif (offset=4) then
+    data_aligned(63 downto 32) <= previous_dat0(31 downto 0);
+    data_aligned(31 downto 0) <= data_i(63 downto 32);
+elsif(offset=6) then
+    data_aligned(63 downto 16)<=previous_dat0(47 downto 0);
+    data_aligned(15 downto 0)<=data_i(63 downto 48);
+elsif (offset=10) then
+      data_aligned(63 downto 48) <= previous_dat1(15 downto 0);
+   data_aligned(47 downto 0) <= previous_dat0(63 downto 16);
+elsif (offset=14) then
+      data_aligned(63 downto 16) <= previous_dat1(47 downto 0);
+   data_aligned(15 downto 0) <= previous_dat0(63 downto 48);
+end if;
+end process;
 
 
 
 process(clk, EN)
 begin
+header_data.ethernet_data<=(eth_dst_di,eth_src_di,eth_type);
+header_data.ip_data<=(ip_v,ip_hlen,ip_tos,ip_len,ip_id,ip_flag_frag_off,ip_ttl,ip_checksum,ip_protocol,ip_src_addr,ip_dst_addr,ip_options);
+header_data.tcp_data<=(tcp_src_port,tcp_dst_port,tcp_seq,tcp_ack,tcp_dat_off_res,tcp_flags,tcp_window,tcp_checksum,tcp_urg,tcp_options(0));
+
 if (EN = '0') then
 	y <= start;
 	rst_o<='0';
+	writeReq<='0';
 	--en_ip_chk<='0';
 	--en_tcp_chk <='0';
 	--en_tcp_state<='0';
 	
 elsif (clk'EVENT and clk = '1') then
+  previous_dat0<=data_i;
+  previous_dat1<=previous_dat0;
+  previous_dat2<=previous_dat1;
 case y is 
 	when start=>
 			if (EN = '1') then 
@@ -144,6 +162,9 @@ case y is
 					tcp_byte_counter<=0;
 					payload_byte_counter<=0;
 					y <= preamble;
+					offset<=0;
+					data_offset<="0000";
+					tcp_opt_offset<=0;
 				else
 					y<=start;
 				end if;
@@ -155,7 +176,7 @@ case y is
 	--	size of preamble field is 8 byte 
 	-- s1
 	when preamble=>
-
+		writeReq<='0';
 		y<=eth_mac;
 		
 		
@@ -167,8 +188,8 @@ case y is
 	-- s2
 	when eth_mac=>
 
-			eth_dst_di<=unsigned(data_i(input_width-1 downto input_width-47-1));
-			eth_src_di(47 downto 47-15)<=unsigned(data_i(input_width-1-48 downto 0));
+			eth_dst_di<=data_i(input_width-1 downto input_width-47-1);
+			eth_src_di(47 downto 47-15)<=data_i(input_width-1-48 downto 0);
 			--dest_mac_addr(1)<=data_i(input_width-1 downto input_width-mac_addr_size-1);
 			--src_mac_addr(1)<=data_i(input_width-mac_addr_size-2 downto input_width-mac_addr_Size-mac_addr_size-2);
 			eth_byte_counter<=8;
@@ -176,17 +197,16 @@ case y is
 	
 
 	--eth_src_mac 
-	-- captures last 4 bytes of src header, 2 bytes of   eth_type 
-	-- if eth_type is IP4 it contains first two bytes of IP header, which is IP header
-	-- if eth_type is vlan , then it contains first two bytes of vlan tag
-	-- s3
+    -- ethernet src mac and ethernet type
 	when eth_src_mac=>
-		eth_src_di(47-16 downto 0)<=unsigned(data_i(input_width-1 downto input_width-1-31));
+		eth_src_di(47-16 downto 0)<=data_i(input_width-1 downto input_width-1-31);
+		eth_type<=data_i(31 downto 16);
 		-- src_mac
 			if data_i(32 downto 16)=eth_type_ip4  then  	-- IP4
-				ip_v<=data_i(15 downto 12);
-				ip_hlen<=data_i(11 downto 8);
-				ip_tos<=data_i(7 downto 0);
+	     offset<=2;
+				--ip_v<=data_i(15 downto 12);
+				--ip_hlen<=data_i(11 downto 8);
+				--ip_tos<=data_i(7 downto 0);
 				start_ind<=0;
 				y<=ip_hdr_s1;
 			elsif data_i(32 downto 16)=eth_type_arp  then -- ARP
@@ -229,11 +249,15 @@ case y is
 	-- 		if IPV=4 check what Header Length
 	-- if header length=5 set ip_opt=1 else ip_opt
 	--s4
-	when ip_hdr_s1=>				
-			ip_len<=data_i(63 downto 63-15);
-			ip_id<=data_i(63-16 downto 63-16-15);
-			ip_flag_frag_off<=data_i(63-32 downto 63-32-15);
-			ip_ttl<=data_i(63-32-16 downto 63-32-16-7);
+	when ip_hdr_s1=>		
+	    		ip_v<=data_aligned(63 downto 60 );
+				ip_hlen<=data_aligned(59 downto 56);
+				ip_tos<=data_aligned(55 downto 48); 
+			 ip_len<=data_aligned(47 downto 32);
+			 ip_id<=data_aligned(31 downto 16);
+			 ip_flag_frag_off<=data_aligned(15 downto 0);
+			 
+			 ip_ttl<=data_aligned(63-32-16 downto 63-32-16-7);
 			ip_protocol<=data_i(7 downto 0);
 			ip_byte_counter<=ip_byte_counter+4;
 			y<=ip_hdr_s2;
@@ -241,80 +265,119 @@ case y is
 		
 	--s5	
 	when ip_hdr_s2=>
-		ip_checksum<=data_i(63 downto 63-15);
-		ip_src_addr<=data_i(63-16 downto 63-16-31);
-		ip_dst_addr(31 downto 16)<=data_i(15 downto 0);
+	  ip_ttl<=data_aligned(63 downto 56);
+		ip_protocol<=data_aligned(55 downto 48);
+		ip_checksum<=data_aligned(47 downto 32);
+		ip_src_addr<=data_aligned(31 downto 0);
 		y<=ip_hdr_opt;
 
 
 	--s6
 	when ip_hdr_opt=>
-		ip_dst_addr(15 downto 0)<=data_i(63 downto 63-15);
+	  ip_dst_addr<=data_aligned(63 downto 32);
 		if(ip_hlen=5) then
-			tcp_src_port<=data_i(63-16 downto 63-16-15);	
-			tcp_dst_port<=data_i(63-32 downto 16);	
-			tcp_seq(31 downto 16)<=data_i(15 downto 0);
+      offset<=offset+4; -- carry 4 bytes to next cyles
 			y<=tcp_hdr_s1;
 		elsif(ip_hlen>5) then
-			ip_options<=data_i(63-16 downto 63-16-31);
-			tcp_src_port<=data_i(15 downto 0);
+			ip_options<=data_aligned(31 downto 0);
 			y<=tcp_hdr_s1;
 		else 
 			y<=drop_packet; -- droping packet if Header Length Field is incorrect
 		end if;
-		
-		y<=tcp_hdr_s1;
-		
 
-		
 							
 	--s7
 	when tcp_hdr_s1=>	
-		if(ip_hlen=5) then	
-			tcp_seq(15 downto 0)<=data_i(63 downto 63-15);
-			tcp_ack<=data_i(63-16 downto 63-16-31);
-			tcp_dat_off_res<=data_i(63-32 downto 63-32-7);
-			tcp_flags<=data_i(7 downto 0);
-		elsif(ip_hlen>5) then
-			tcp_seq<=data_i(63 downto 63-31);
-			tcp_ack<=data_i(31 downto 0);
-		end if;
+		  tcp_src_port<=data_aligned(63 downto 48);	
+			tcp_dst_port<=data_aligned(47 downto 32);	
+		  tcp_seq<=data_aligned(31 downto 0);
 			y<=tcp_hdr_s2;
-	
-	
-	
+
 	
 	--s8
 	when tcp_hdr_s2=>
-	
-		if(ip_hlen=5) then	
-			tcp_window<=data_i(63 downto 63-15);
-			tcp_checksum<=data_i(63-16 downto 63-16-15);
-			tcp_urg<=data_i(63-16-16 downto 63-16-16-15);
-			--if(tcp_dat_off_res(7 downto 4)=5) then
-			--end if;
-			
-			
-		elsif(ip_hlen>5) then
-			tcp_dat_off_res<=data_i(63 downto 63-7);
-			tcp_flags<=data_i(63-8 downto 63-8-7);
-			tcp_window<=data_i(63-16 downto 63-16-15);
-			tcp_checksum<=data_i(31 downto 16);
-			tcp_urg<=data_i(15 downto 0);
-		end if;
-		
-		y<=tcp_hdr_opt;
-							
-							
-							
-						
+			tcp_ack<=data_aligned(63 downto 32);
+			tcp_dat_off_res<=data_aligned(31 downto 24);
+			tcp_flags<=data_aligned(23 downto 16);
+		  tcp_window<=data_aligned(15 downto 0);
+	     y<=tcp_hdr_opt;
+	     payload_len<=htons_ip_len - (x"00" & "00" & ip_hlen & "00")-(x"00" & "00" & data_aligned(31 downto 28) & "00");
+	     --payload_len<=htons_ip_len - (x"00" & "00" & ip_hlen & "00")-(x"00" & "00" & tcp_dat_off_res(7 downto 4) & "00");
+		  data_offset<=data_aligned(31 downto 28);
 	when tcp_hdr_opt=>
+	
+	   tcp_checksum<=data_aligned(63 downto 48);
+		 tcp_urg<=data_aligned(47 downto 32);
+		 if(data_offset>5 and data_offset<=6) then -- checking if there are any tcp options if data offset is 5 then there are no options. It it is 6 or above, then options exist
+		   tcp_options(tcp_opt_offset)<=data_aligned(31 downto 0);
+		   tcp_opt_offset<=tcp_opt_offset+1;
+		   	     if(payload_len>=1) then
+	             y<=payload;
+	             offset<=offset+4;
+	           else
+	              y<=done;
+	           end if;
+		   --data_offset<=data_offset+4;
+		   ---y<=tcp_opt;
+		  elsif(data_offset>6 ) then
+		  	   tcp_options(tcp_opt_offset)<=data_aligned(31 downto 0);
+		  	   data_offset<=data_offset-6;
+		    y<=tcp_opt;
+		   else
+		   	     if(payload_len>=1) then
+	             y<=payload;
+	             offset<=offset+4;
+	           else
+	              y<=done;
+	           end if;
+      end if;
+		   
+		 
 		-- checksum 2
 		-- urgent pointer 2 bytes
 		-- tcp options if any 4 bytes	
 		y<=preamble;
+		writeReq<='1';
+		
+	when tcp_opt=>
+	  
+	      if(data_offset>2) then
+	       tcp_options(tcp_opt_offset)<=data_aligned(63 downto 32);
+	       tcp_options(tcp_opt_offset+1)<=data_aligned(31 downto 0);
+	       tcp_opt_offset<=tcp_opt_offset+2;
+	       data_offset<=data_offset-2;
+	       y<=tcp_opt;
+	      elsif (data_offset=2) then
+	      	  tcp_options(tcp_opt_offset)<=data_aligned(63 downto 32);
+	         tcp_options(tcp_opt_offset+1)<=data_aligned(31 downto 0);
+	         tcp_opt_offset<=tcp_opt_offset+2;
+	         data_offset<=data_offset-2;
+	         	  if(payload_len>=1) then
+	             y<=payload;
+	           else
+	              y<=done;
+	           end if;
+	       else
+	           tcp_options(tcp_opt_offset)<=data_aligned(63 downto 32);
+	           if(payload_len>=1) then
+	             y<=payload;
+	             offset<=offset+4;
+	           else
+	              y<=done;
+	           end if;
+	        end if;
+	          
+	       
 	when payload=>
-		y<=done;
+	      if(payload_len>4) then
+	             y<=payload;
+	             payload_len<=payload_len-4;
+	               payload_dat<=data_aligned;
+	      else
+	               payload_dat<=data_aligned;
+	              y<=done;   
+	      end if;
+	 
 	when done=>
 		if(end_packet='1') then
 			y<=start;
